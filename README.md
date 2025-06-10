@@ -17,15 +17,13 @@ Intended, but not limited, to use with **ROS 2**. This extension provides a mode
 
 **Important**: This extension must be installed in the same environment as colcon to be discoverable by colcon's plugin system. Typically this means system-wide installation.
 
-### Using pip
+### Install from PyPi (last tagged version)
 
 ```bash
+# Using pip
 pip install colcon-uv --break-system-packages
-```
 
-### Using uv
-
-```bash
+# Using uv
 uv pip install --system --break-system-packages colcon-uv
 ```
 
@@ -45,6 +43,28 @@ For practical examples, see the test examples in this repository:
 
 - **`ament_cmake`** for C++/Python hybrid packages [`tests/examples/uv_ament_cmake_example`](tests/examples/uv_ament_cmake_example/pyproject.toml)
 - **`ament_python`** for pure Python packages [`tests/examples/uv_ament_python_example`](tests/examples/uv_ament_python_example/pyproject.toml)
+
+## Usage
+
+### Automatic Dependency Installation
+
+When you run `colcon build`, dependencies are automatically installed using UV. No additional steps required!
+
+```bash
+# Dependencies are automatically installed during build
+colcon build --packages-select my_package
+```
+
+### Manual Dependency Installation (Optional)
+
+Similar to `rosdep install`, you can optionally install dependencies standalone before building:
+
+```bash
+# Install dependencies for all packages in src/
+colcon uv install
+```
+
+**Note**: This step is optional since `colcon build` automatically handles dependency installation. Use this when you want to pre-install dependencies or troubleshoot dependency issues separately from the build process.
 
 ## Configuration
 
