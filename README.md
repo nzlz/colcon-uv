@@ -1,6 +1,7 @@
 # colcon-uv
 
 [![CI](https://github.com/nzlz/colcon-uv/actions/workflows/ci.yml/badge.svg)](https://github.com/nzlz/colcon-uv/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-75%25-brightgreen)](https://github.com/nzlz/colcon-uv/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/colcon-uv.svg)](https://pypi.org/project/colcon-uv/)
 
 A **colcon extension** for building and testing Python packages that use **[uv](https://github.com/astral-sh/uv)** for dependency management.
@@ -80,3 +81,7 @@ This project is inspired by and builds upon:
 - [colcon-poetry-ros](https://github.com/UrbanMachine/colcon-poetry-ros) - Poetry integration for ROS packages
 - [colcon-ros](https://github.com/colcon/colcon-ros/tree/colcon-python-project) - Experimental ROS support for colcon
 - [uv](https://github.com/astral-sh/uv) - An extremely fast Python package installer and resolver
+
+## Acknowledgments
+
+Built with the assistance of [Cursor](https://cursor.sh) - AI-powered code editor.
