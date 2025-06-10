@@ -1,0 +1,7 @@
+# Copyright 2024 Your Name
+# Licensed under the Apache License, Version 2.0
+
+/**:
+  ros__parameters:
+    example_param: 42
+    example_string: "hello" 

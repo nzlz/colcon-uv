@@ -1,0 +1,15 @@
+uv_ament_python_example_node:
+  ros__parameters:
+    # Example parameters for uv_ament_python_example
+    update_rate: 10.0
+    debug_mode: false
+    max_iterations: 100
+    tolerance: 0.001
+    
+    # String parameters
+    frame_id: "base_link"
+    topic_name: "/uv_ament_python_example/data"
+    
+    # Array parameters
+    coefficients: [1.0, 2.0, 3.0, 4.0]
+    joint_names: ["joint1", "joint2", "joint3"] 

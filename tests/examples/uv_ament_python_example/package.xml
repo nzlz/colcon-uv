@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>uv_ament_python_example</name>
+  <version>0.1.0</version>
+  <description>Pure Python/UV example package for colcon-uv</description>
+  <maintainer email="your.email@example.com">Your Name</maintainer>
+  <license>Apache License 2.0</license>
+  <buildtool_depend>colcon_uv</buildtool_depend>
+  <exec_depend>numpy</exec_depend>
+  <exec_depend>requests</exec_depend>
+  <test_depend>pytest</test_depend>
+  <test_depend>pytest-cov</test_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package> 

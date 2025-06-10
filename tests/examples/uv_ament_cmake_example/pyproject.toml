@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "uv_ament_cmake_example"
+version = "0.1.0"
+description = "Example package using colcon-uv (uses numpy 2.2.0 for isolation demo)"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+dependencies = [
+    "numpy==2.2.0",   # Intentionally newer version for isolation demo
+    "requests>=2.25.0"
+]
+
+[project.scripts]
+pong_node = "uv_ament_cmake_example.pong_node:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["uv_ament_cmake_example"]
+
+[tool.colcon-uv-ros]
+name = "uv_ament_cmake_example"
+
+[tool.colcon-uv-ros.dependencies]
+depend = ["rclpy"]
+build_depend = ["ament_cmake"]
+exec_depend = ["rosidl_default_generators"]
+test_depend = ["ament_lint_auto", "ament_lint_common"]
+test_dependencies = [
+    "pytest",
+    "pytest-cov"
+]
+build_command = "echo 'Building example package...'"
+
+# Data files configuration for ROS2
+[tool.colcon-uv-ros.data-files]
+"share/ament_index/resource_index/packages" = ["resource/uv_ament_cmake_example"]
+"share/uv_ament_cmake_example" = ["package.xml", "launch", "config"] 

@@ -1,0 +1,114 @@
+name: Test colcon-uv Integration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  test-colcon-uv:
+    runs-on: ubuntu-latest
+    container:
+      image: ros:jazzy
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      ROS_DISTRO: jazzy
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "/root/.local/bin" >> $GITHUB_PATH
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install development dependencies
+        run: |
+          uv pip install --system --break-system-packages \
+            ruff \
+            coverage \
+            pytest \
+            pytest-cov
+
+      - name: Check code formatting with ruff
+        run: |
+          echo "Checking colcon_uv formatting..."
+          ruff format --check colcon_uv
+          echo "Checking examples formatting..."
+          ruff format --check tests/examples/
+
+      - name: Run ruff linting
+        run: |
+          echo "Linting colcon_uv..."
+          ruff check colcon_uv
+          echo "Linting examples..."
+          ruff check tests/examples/
+
+      - name: Setup workspace structure
+        run: |
+          mkdir -p /ros2_ws/tools
+          mkdir -p /ros2_ws/src/examples
+
+          # Copy colcon-uv to tools (from current directory)
+          cp -r ./colcon_uv /ros2_ws/tools/
+
+          # Copy examples
+          cp -r ./tests/examples/* /ros2_ws/src/examples/
+
+          # Copy test scripts
+          cp ./tests/docker/test_pingpong.sh /ros2_ws/
+          cp ./tests/docker/test_isolation.sh /ros2_ws/
+          chmod +x /ros2_ws/test_pingpong.sh /ros2_ws/test_isolation.sh
+
+          # Create COLCON_IGNORE for tools
+          touch /ros2_ws/tools/COLCON_IGNORE
+
+      - name: Install colcon-uv
+        run: |
+          cd /ros2_ws/tools/colcon_uv
+          uv pip install --system --break-system-packages .
+
+      - name: Run colcon-uv tests with coverage
+        run: |
+          cd /ros2_ws/tools/colcon_uv
+          echo "Running colcon-uv unit tests with coverage..."
+          coverage run -m pytest tests/ -v
+          echo "Checking coverage report..."
+          coverage report -m --include="colcon_uv/*" --fail-under=75
+          coverage xml --include="colcon_uv/*"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: /ros2_ws/tools/colcon_uv/coverage.xml
+          flags: unittests
+          name: colcon-uv-coverage
+        continue-on-error: true
+
+      - name: Source ROS environment
+        run: |
+          echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
+
+      - name: Build packages
+        run: |
+          cd /ros2_ws
+          source /opt/ros/${ROS_DISTRO}/setup.bash
+          colcon build --packages-select uv_ament_python_example uv_ament_cmake_example --symlink-install
+
+      - name: Test ping-pong communication
+        run: |
+          cd /ros2_ws
+          /ros2_ws/test_pingpong.sh
+
+      - name: Test dependency isolation
+        run: |
+          cd /ros2_ws
+          /ros2_ws/test_isolation.sh

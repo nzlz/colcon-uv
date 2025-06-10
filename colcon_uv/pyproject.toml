@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "colcon-uv"
+dynamic = ["version"]
+description = "A Colcon extension providing support for Python projects that use UV"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "Nestor Gonzalez", email = "nestor94gonzalez@gmail.com"}
+]
+maintainers = [
+    {name = "Nestor Gonzalez", email = "nestor94gonzalez@gmail.com"}
+]
+keywords = ["colcon"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Plugins",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: BSD License",
+]
+dependencies = [
+    "colcon-core~=0.6",
+    "tomli>=1.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/nzlz/colcon-uv"
+
+[project.entry-points."colcon_core.package_augmentation"]
+uv = "colcon_uv.package_augmentation.uv:UvPackageAugmentation"
+
+[project.entry-points."colcon_core.package_identification"]
+uv = "colcon_uv.package_identification.uv:UvPackageIdentification"
+
+[project.entry-points."colcon_core.task.build"]
+"uv.python" = "colcon_uv.task.uv.build:UvBuildTask"
+
+[project.entry-points."colcon_core.task.test"]
+"uv.python" = "colcon_uv.task.uv.test:UvTestTask"
+
+[project.entry-points."colcon_core.verb"]
+"uv" = "colcon_uv.cli:UvVerb"
+
+[tool.hatch.version]
+path = "colcon_uv/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["colcon_uv"]
+
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black/ruff formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.ruff.lint.isort]
+known-first-party = ["colcon_uv"]

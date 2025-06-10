@@ -1,0 +1,15 @@
+uv_ament_cmake_example_node:
+  ros__parameters:
+    # Example parameters for uv_ament_cmake_example
+    update_rate: 20.0
+    debug_mode: true
+    max_iterations: 200
+    tolerance: 0.0001
+    
+    # String parameters
+    frame_id: "map"
+    topic_name: "/uv_ament_cmake_example/status"
+    
+    # Array parameters
+    gains: [0.1, 0.2, 0.3]
+    sensor_names: ["sensor1", "sensor2", "sensor3", "sensor4"] 

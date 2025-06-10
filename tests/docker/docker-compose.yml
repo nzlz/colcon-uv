@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  colcon_uv_test:
+    container_name: colcon_uv_test
+    build:
+      context: ../..
+      dockerfile: tests/docker/Dockerfile
+      args:
+        ROS_DISTRO: jazzy
+    environment:
+      ROS_DISTRO: jazzy
+    entrypoint: ["/ros2_ws/entrypoint.sh"]
