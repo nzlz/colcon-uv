@@ -7,6 +7,8 @@ A **colcon extension** for building and testing Python packages that use **[uv](
 
 Intended, but not limited, to use with **ROS 2**. This extension provides a modern alternative to traditional setuptools-based or even poetry-based Python package management in ROS environments.
 
+> **⚠️ Experimental**: This project is in early development. Testing, feedback, and contributions are welcome!
+
 ## Features
 
 - **Fast Dependency Management**: Leverages UV's lightning-fast dependency resolution and installation
