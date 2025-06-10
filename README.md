@@ -1,6 +1,7 @@
 # colcon-uv
 
 [![CI](https://github.com/nzlz/colcon-uv/actions/workflows/ci.yml/badge.svg)](https://github.com/nzlz/colcon-uv/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/colcon-uv.svg)](https://pypi.org/project/colcon-uv/)
 
 A **colcon extension** for building and testing Python packages that use **[uv](https://github.com/astral-sh/uv)** for dependency management.
 
