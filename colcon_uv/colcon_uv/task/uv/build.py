@@ -34,8 +34,10 @@ class UvBuildTask(TaskExtensionPoint):
         pkg = self.context.pkg
         args = self.context.args
 
-        # UV sync handles EVERYTHING - deps + package installation
-        logger.info("Syncing dependencies and installing package...")
+        # Install package with all dependencies (runtime, optional, and dependency groups)
+        # This uses uv pip install to achieve dependency and package installation
+        # similar to uv sync, but without lockfiles
+        logger.info("Installing package with all dependencies...")
         install_dependencies_from_descriptor(pkg, Path(args.install_base), False)
 
         # Handle ROS-specific stuff (data files, environment hooks, etc.)
