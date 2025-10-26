@@ -35,8 +35,9 @@ class UvTestTask(TaskExtensionPoint):
         logger.info("Testing UV package in '{args.path}'".format_map(locals()))
 
         # Get virtual environment path
-        venv_path = Path(args.build_base) / "venv"
-        if not venv_path.exists():
+        venv_path = Path(args.install_base) / "venv"
+        venv_bin = venv_path / "bin"
+        if not venv_bin.exists():
             logger.error(
                 "Virtual environment not found. Please build the package first."
             )
@@ -44,4 +45,5 @@ class UvTestTask(TaskExtensionPoint):
 
         # Run tests using pytest
         logger.info("Running tests...")
-        subprocess.run([str(venv_path / "bin" / "pytest"), str(pkg.path)], check=True)
+        pytest_executable = venv_bin / "pytest"
+        subprocess.run([str(pytest_executable), str(pkg.path)], check=True)
