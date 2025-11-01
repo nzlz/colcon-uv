@@ -46,7 +46,15 @@ class UvTestTask(TaskExtensionPoint):
         # Run tests using pytest
         logger.info("Running tests...")
         pytest_executable = venv_bin / "pytest"
-        result = subprocess.run([str(pytest_executable), str(pkg.path)], check=False)
+
+        cmd = [str(pytest_executable)]
+
+        if hasattr(args, 'pytest_args') and args.pytest_args:
+            cmd.extend(args.pytest_args)
+
+        cmd.append(str(pkg.path))
+
+        result = subprocess.run(cmd, check=False)
 
         if result.returncode != 0:
             logger.warning(f"Tests failed with return code {result.returncode}")
