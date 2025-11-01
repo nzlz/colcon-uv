@@ -41,9 +41,16 @@ class UvTestTask(TaskExtensionPoint):
             logger.error(
                 "Virtual environment not found. Please build the package first."
             )
-            return
+            return 1
 
         # Run tests using pytest
         logger.info("Running tests...")
         pytest_executable = venv_bin / "pytest"
-        subprocess.run([str(pytest_executable), str(pkg.path)], check=True)
+        result = subprocess.run([str(pytest_executable), str(pkg.path)], check=False)
+
+        if result.returncode != 0:
+            logger.warning(f"Tests failed with return code {result.returncode}")
+        else:
+            logger.info("All tests passed")
+
+        return result.returncode
