@@ -16,10 +16,12 @@ class TestDependenciesInstall(unittest.TestCase):
         from colcon_uv.dependencies.install import (
             discover_packages,
             install_dependencies,
+            install_dependencies_from_descriptor,
         )
 
         self.discover_packages = discover_packages
         self.install_dependencies = install_dependencies
+        self.install_dependencies_from_descriptor = install_dependencies_from_descriptor
 
     def test_discover_packages_empty_directory(self):
         """Test package discovery in empty directory."""
@@ -77,7 +79,7 @@ name = "test_package"
             mock_run.return_value = MagicMock(returncode=0)
 
             # Should not raise an exception
-            self.install_dependencies(desc, install_base, merge_install)
+            self.install_dependencies_from_descriptor(desc, install_base, merge_install)
 
             # Verify subprocess was called
             self.assertTrue(mock_run.called)
@@ -159,7 +161,7 @@ name = "test_package"
 
             mock_run.return_value = MagicMock(returncode=0)
 
-            self.install_dependencies(desc, install_base, merge_install)
+            self.install_dependencies_from_descriptor(desc, install_base, merge_install)
 
             # Should still work with merge install
             self.assertTrue(mock_run.called)
