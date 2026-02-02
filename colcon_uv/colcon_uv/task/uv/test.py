@@ -49,7 +49,7 @@ class UvTestTask(TaskExtensionPoint):
 
         cmd = [str(pytest_executable)]
 
-        if hasattr(args, 'pytest_args') and args.pytest_args:
+        if hasattr(args, "pytest_args") and args.pytest_args:
             cmd.extend(args.pytest_args)
 
         cmd.append(str(pkg.path))

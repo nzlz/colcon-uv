@@ -123,7 +123,9 @@ def install_dependencies(
     # Use --python to specify the target venv's python
     python_exe = venv_path / "bin" / "python"
 
-    optional_deps = project.pyproject_data.get("project", {}).get("optional-dependencies", {})
+    optional_deps = project.pyproject_data.get("project", {}).get(
+        "optional-dependencies", {}
+    )
 
     if optional_deps:
         extras = ",".join(optional_deps.keys())
@@ -139,17 +141,18 @@ def install_dependencies(
 
     # Additionally, install dependency groups (PEP 735) if present
     dependency_groups = project.pyproject_data.get("dependency-groups", {})
-    
+
     if dependency_groups:
         group_names = list(dependency_groups.keys())
         logger.info(f"Installing dependency groups: {', '.join(group_names)}")
-        
+
         cmd = ["uv", "pip", "install", "--python", str(python_exe)]
         for group in group_names:
             cmd.extend(["--group", group])
         cmd.append(str(project.path))
-        
+
         subprocess.run(cmd, check=True)
+
 
 def install_dependencies_from_descriptor(
     pkg_descriptor, install_base: Path, merge_install: bool
