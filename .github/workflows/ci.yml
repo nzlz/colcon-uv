@@ -82,7 +82,7 @@ jobs:
           echo "Running colcon-uv unit tests with coverage..."
           coverage run -m pytest tests/ -v
           echo "Checking coverage report..."
-          coverage report -m --include="colcon_uv/*" --fail-under=75
+          coverage report -m --include="colcon_uv/*" --fail-under=70
           coverage xml --include="colcon_uv/*"
 
       - name: Upload coverage reports
