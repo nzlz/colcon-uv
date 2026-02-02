@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    environment: pypi
+
     
     steps:
       - name: Checkout repository
