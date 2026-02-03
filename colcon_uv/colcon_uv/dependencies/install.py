@@ -117,7 +117,16 @@ def install_dependencies(
     # Create virtual environment at the target location with system packages access
     # --system-site-packages is needed because ROS 2 packages like rclpy are installed
     # system-wide (not available on PyPI) and our nodes need access to them
-    subprocess.run(["uv", "venv", "--system-site-packages", str(venv_path)], check=True)
+    try:
+        subprocess.run(
+            ["uv", "venv", "--system-site-packages", str(venv_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to create venv: {e.stderr}")
+        raise
 
     # Install dependencies and the package itself to the target venv
     # Use --python to specify the target venv's python
@@ -134,10 +143,35 @@ def install_dependencies(
     else:
         install_target = str(project.path)
 
-    subprocess.run(
-        ["uv", "pip", "install", "--python", str(python_exe), "-e", install_target],
-        check=True,
-    )
+    try:
+        subprocess.run(
+            [
+                "uv",
+                "--no-progress",
+                "pip",
+                "install",
+                "--python",
+                str(python_exe),
+                "-e",
+                install_target,
+            ],
+            check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        # UV writes its errors to stderr, pass them through to user
+        if e.stderr:
+            sys.stderr.write(e.stderr)
+            sys.stderr.flush()
+
+        # Log simply without the exception details
+        logger.error(f"Failed to install dependencies for {install_target}")
+
+        # Re-raise without the traceback by using sys.exit
+        # This prevents colcon from printing the full Python traceback
+        sys.exit(1)
 
     # Additionally, install dependency groups (PEP 735) if present
     dependency_groups = project.pyproject_data.get("dependency-groups", {})
@@ -146,12 +180,27 @@ def install_dependencies(
         group_names = list(dependency_groups.keys())
         logger.info(f"Installing dependency groups: {', '.join(group_names)}")
 
-        cmd = ["uv", "pip", "install", "--python", str(python_exe)]
+        cmd = ["uv", "--no-progress", "pip", "install", "--python", str(python_exe)]
         for group in group_names:
             cmd.extend(["--group", group])
         cmd.append(str(project.path))
 
-        subprocess.run(cmd, check=True)
+        try:
+            subprocess.run(
+                cmd, check=True, stdout=sys.stdout, stderr=sys.stderr, text=True
+            )
+        except subprocess.CalledProcessError as e:
+            # UV writes its errors to stderr, pass them through to user
+            if e.stderr:
+                sys.stderr.write(e.stderr)
+                sys.stderr.flush()
+
+            # Log simply without the exception details
+            logger.error(f"Failed to install dependency groups for {project.name}")
+
+            # Re-raise without the traceback by using sys.exit
+            # This prevents colcon from printing the full Python traceback
+            sys.exit(1)
 
 
 def install_dependencies_from_descriptor(

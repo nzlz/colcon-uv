@@ -91,13 +91,21 @@ class UvBuildTask(TaskExtensionPoint):
                 source_path = pkg.path / Path(source)
                 if source_path.exists():
                     if source_path.is_dir():
-                        shutil.copytree(
-                            source_path,
-                            dest_path / source_path.name,
-                            dirs_exist_ok=True,
-                        )
+                        try:
+                            shutil.copytree(
+                                source_path,
+                                dest_path / source_path.name,
+                                dirs_exist_ok=True,
+                            )
+                        except shutil.Error:
+                            # Ignore errors that happen when source and dest are the same file
+                            # This is common with --symlink-install
+                            pass
                     else:
-                        shutil.copy2(source_path, dest_path)
+                        try:
+                            shutil.copy2(source_path, dest_path)
+                        except shutil.SameFileError:
+                            pass
 
         return 0
 
