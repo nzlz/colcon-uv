@@ -41,6 +41,12 @@ pip install git+https://github.com/nzlz/colcon-uv.git#subdirectory=colcon_uv --b
 uv pip install --system --break-system-packages git+https://github.com/nzlz/colcon-uv.git#subdirectory=colcon_uv
 ```
 
+### Install from cloned source (local development)
+
+```bash
+pip install --break-system-packages --target /usr/lib/python3/dist-packages -e colcon_uv
+```
+
 ## Quick Start
 
 For practical examples, see the test examples in this repository:
