@@ -137,9 +137,7 @@ def _preseed_extra_site_packages(project: UvPackage, venv_path: Path) -> None:
     if pth_lines:
         pth_file = venv_site / "colcon_uv_extra.pth"
         pth_file.write_text("\n".join(pth_lines) + "\n")
-        logger.info(
-            f"Pre-seeded venv with extra site-packages: {', '.join(pth_lines)}"
-        )
+        logger.info(f"Pre-seeded venv with extra site-packages: {', '.join(pth_lines)}")
 
 
 def _get_index_flags(project: UvPackage) -> List[str]:
@@ -272,7 +270,15 @@ def install_dependencies(
         group_names = list(dependency_groups.keys())
         logger.info(f"Installing dependency groups: {', '.join(group_names)}")
 
-        cmd = ["uv", "--no-progress", "pip", "install", *index_flags, "--python", str(python_exe)]
+        cmd = [
+            "uv",
+            "--no-progress",
+            "pip",
+            "install",
+            *index_flags,
+            "--python",
+            str(python_exe),
+        ]
         for group in group_names:
             cmd.extend(["--group", group])
         cmd.append(str(project.path))

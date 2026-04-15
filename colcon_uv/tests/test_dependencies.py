@@ -38,7 +38,12 @@ class TestGetIndexFlags(unittest.TestCase):
         flags = self._get_index_flags(pkg)
         self.assertEqual(
             flags,
-            ["--extra-index-url", "https://a.com/simple", "--extra-index-url", "https://b.com/simple"],
+            [
+                "--extra-index-url",
+                "https://a.com/simple",
+                "--extra-index-url",
+                "https://b.com/simple",
+            ],
         )
 
     def test_index_url(self):
@@ -53,7 +58,9 @@ class TestGetIndexFlags(unittest.TestCase):
             '[tool.colcon-uv-ros]\nname = "test"\nfind-links = ["/opt/wheels", "/opt/more"]'
         )
         flags = self._get_index_flags(pkg)
-        self.assertEqual(flags, ["--find-links", "/opt/wheels", "--find-links", "/opt/more"])
+        self.assertEqual(
+            flags, ["--find-links", "/opt/wheels", "--find-links", "/opt/more"]
+        )
 
     def test_all_combined(self):
         pkg = self._make_package(
@@ -66,39 +73,53 @@ class TestGetIndexFlags(unittest.TestCase):
         self.assertEqual(
             flags,
             [
-                "--index-url", "https://custom.pypi.org/simple",
-                "--extra-index-url", "https://extra.com/simple",
-                "--find-links", "/opt/wheels",
+                "--index-url",
+                "https://custom.pypi.org/simple",
+                "--extra-index-url",
+                "https://extra.com/simple",
+                "--find-links",
+                "/opt/wheels",
             ],
         )
 
-    @patch.dict(os.environ, {
-        "COLCON_UV_INDEX_URL": "https://env.pypi.org/simple",
-        "COLCON_UV_EXTRA_INDEX_URL": "https://env-extra.com/simple",
-        "COLCON_UV_FIND_LINKS": "/opt/env-wheels",
-    })
+    @patch.dict(
+        os.environ,
+        {
+            "COLCON_UV_INDEX_URL": "https://env.pypi.org/simple",
+            "COLCON_UV_EXTRA_INDEX_URL": "https://env-extra.com/simple",
+            "COLCON_UV_FIND_LINKS": "/opt/env-wheels",
+        },
+    )
     def test_env_fallback(self):
         pkg = self._make_package('[tool.colcon-uv-ros]\nname = "test"')
         flags = self._get_index_flags(pkg)
         self.assertEqual(
             flags,
             [
-                "--index-url", "https://env.pypi.org/simple",
-                "--extra-index-url", "https://env-extra.com/simple",
-                "--find-links", "/opt/env-wheels",
+                "--index-url",
+                "https://env.pypi.org/simple",
+                "--extra-index-url",
+                "https://env-extra.com/simple",
+                "--find-links",
+                "/opt/env-wheels",
             ],
         )
 
-    @patch.dict(os.environ, {
-        "COLCON_UV_EXTRA_INDEX_URL": "https://env-extra.com/simple",
-    })
+    @patch.dict(
+        os.environ,
+        {
+            "COLCON_UV_EXTRA_INDEX_URL": "https://env-extra.com/simple",
+        },
+    )
     def test_pyproject_overrides_env(self):
         pkg = self._make_package(
             '[tool.colcon-uv-ros]\nname = "test"\n'
             'extra-index-url = ["https://pyproject-extra.com/simple"]'
         )
         flags = self._get_index_flags(pkg)
-        self.assertEqual(flags, ["--extra-index-url", "https://pyproject-extra.com/simple"])
+        self.assertEqual(
+            flags, ["--extra-index-url", "https://pyproject-extra.com/simple"]
+        )
 
 
 class TestDependenciesInstall(unittest.TestCase):
@@ -257,10 +278,7 @@ find-links = ["/opt/jetson-wheels"]
             self.install_dependencies_from_descriptor(desc, install_base, False)
 
             # Find the pip install call (skip the venv creation call)
-            pip_calls = [
-                c for c in mock_run.call_args_list
-                if "pip" in str(c)
-            ]
+            pip_calls = [c for c in mock_run.call_args_list if "pip" in str(c)]
             self.assertTrue(len(pip_calls) > 0)
 
             pip_cmd = pip_calls[0][0][0]  # first positional arg of first pip call
