@@ -249,6 +249,26 @@ def install_dependencies(
     else:
         install_target = str(project.path)
 
+    # Build override arguments from [tool.uv].override-dependencies.
+    # uv pip install does not read override-dependencies from pyproject.toml,
+    # so we materialise them into a temporary requirements file and pass it
+    # via --override.
+    override_args: List[str] = []
+    override_deps = (
+        project.pyproject_data.get("tool", {})
+        .get("uv", {})
+        .get("override-dependencies", [])
+    )
+    override_file: Optional[Path] = None
+    if override_deps:
+        import tempfile
+        override_file = Path(
+            tempfile.mktemp(prefix="colcon_uv_override_", suffix=".txt")
+        )
+        override_file.write_text("\n".join(override_deps) + "\n")
+        override_args = ["--override", str(override_file)]
+        logger.info(f"Using override-dependencies: {override_deps}")
+
     try:
         subprocess.run(
             [
@@ -259,6 +279,7 @@ def install_dependencies(
                 *index_flags,
                 "--python",
                 str(python_exe),
+                *override_args,
                 "-e",
                 install_target,
             ],
@@ -293,6 +314,7 @@ def install_dependencies(
             "pip",
             "install",
             *index_flags,
+            *override_args,
             "--python",
             str(python_exe),
         ]
@@ -317,6 +339,10 @@ def install_dependencies(
             # Re-raise without the traceback by using sys.exit
             # This prevents colcon from printing the full Python traceback
             sys.exit(1)
+
+    # Clean up the temporary override file
+    if override_file and override_file.exists():
+        override_file.unlink()
 
 
 def install_dependencies_from_descriptor(
