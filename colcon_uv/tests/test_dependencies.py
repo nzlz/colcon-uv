@@ -226,7 +226,9 @@ name = "test_package"
 
             # Function should handle failure gracefully without raising to caller
             try:
-                self.install_dependencies(desc, install_base, merge_install)
+                self.install_dependencies_from_descriptor(
+                    desc, install_base, merge_install
+                )
                 # If no exception raised, that's fine - graceful handling
             except CalledProcessError:
                 # If CalledProcessError propagates, that's also expected behavior
