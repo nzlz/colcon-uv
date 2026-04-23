@@ -179,6 +179,35 @@ def _get_index_flags(project: UvPackage) -> List[str]:
     return flags
 
 
+def _resolve_python_version(project: UvPackage) -> str:
+    """Resolve the Python version to use for a project's virtual environment.
+
+    Checks in order:
+      1. .python-version file in the project directory
+      2. requires-python field in pyproject.toml
+      3. The interpreter running colcon (sys.executable)
+    """
+    # 1. .python-version (uv / pyenv convention)
+    python_version_file = project.path / ".python-version"
+    if python_version_file.exists():
+        version = python_version_file.read_text().strip()
+        if version:
+            logger.info(f"Using Python version from .python-version: {version}")
+            return version
+
+    # 2. requires-python from pyproject.toml
+    requires_python = project.pyproject_data.get("project", {}).get(
+        "requires-python", ""
+    )
+    if requires_python:
+        logger.info(f"Using requires-python from pyproject.toml: {requires_python}")
+        return requires_python
+
+    # 3. Fallback to the Python running colcon
+    logger.info(f"Using colcon's Python: {sys.executable}")
+    return sys.executable
+
+
 def install_dependencies(
     project: UvPackage, install_base: Path, merge_install: bool
 ) -> None:
@@ -198,13 +227,14 @@ def install_dependencies(
     # Venv path - this should be /install/PACKAGE_NAME/venv/
     venv_path = install_base / "venv"
 
-    # Determine the Python interpreter to use for the virtual environment.
-    # Use the same Python that is running colcon so that the venv is
-    # compatible with system-installed ROS packages (e.g. rclpy).
-    # Without this, uv may pick the highest Python version available on the
-    # system, which can cause incompatibilities with system Boost.Python,
-    # ROS packages, and other native libraries.
-    python_for_venv = sys.executable
+    # Determine the Python version for the virtual environment.
+    # Priority:
+    #   1. .python-version file in the project directory (uv convention)
+    #   2. requires-python from pyproject.toml
+    #   3. sys.executable (the Python running colcon / ROS)
+    # Without an explicit version, uv defaults to the highest Python on the
+    # system, which can break Boost.Python, ROS system packages, etc.
+    python_version = _resolve_python_version(project)
 
     # --system-site-packages is needed because ROS 2 packages like rclpy are installed
     # system-wide (not available on PyPI) and our nodes need access to them
@@ -218,7 +248,7 @@ def install_dependencies(
                     "venv",
                     "--system-site-packages",
                     "--python",
-                    python_for_venv,
+                    python_version,
                     str(venv_path),
                 ],
                 check=True,
