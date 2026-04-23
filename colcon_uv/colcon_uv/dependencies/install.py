@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import tomli
 
@@ -198,7 +198,14 @@ def install_dependencies(
     # Venv path - this should be /install/PACKAGE_NAME/venv/
     venv_path = install_base / "venv"
 
-    # Create virtual environment at the target location with system packages access
+    # Determine the Python interpreter to use for the virtual environment.
+    # Use the same Python that is running colcon so that the venv is
+    # compatible with system-installed ROS packages (e.g. rclpy).
+    # Without this, uv may pick the highest Python version available on the
+    # system, which can cause incompatibilities with system Boost.Python,
+    # ROS packages, and other native libraries.
+    python_for_venv = sys.executable
+
     # --system-site-packages is needed because ROS 2 packages like rclpy are installed
     # system-wide (not available on PyPI) and our nodes need access to them
     # Skip recreation if the venv already exists so incremental builds are fast
@@ -206,7 +213,14 @@ def install_dependencies(
     if not (venv_path / "bin" / "python").exists():
         try:
             subprocess.run(
-                ["uv", "venv", "--system-site-packages", str(venv_path)],
+                [
+                    "uv",
+                    "venv",
+                    "--system-site-packages",
+                    "--python",
+                    python_for_venv,
+                    str(venv_path),
+                ],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -284,11 +298,12 @@ def install_dependencies(
         ]
         for group in group_names:
             cmd.extend(["--group", group])
-        cmd.append(str(project.path))
+        cmd.append(".")
 
         try:
             subprocess.run(
-                cmd, check=True, stdout=sys.stdout, stderr=sys.stderr, text=True
+                cmd, check=True, stdout=sys.stdout, stderr=sys.stderr, text=True,
+                cwd=str(project.path),
             )
         except subprocess.CalledProcessError as e:
             # UV writes its errors to stderr, pass them through to user
