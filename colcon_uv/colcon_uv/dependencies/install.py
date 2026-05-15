@@ -5,7 +5,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import tomli
 
@@ -95,6 +95,35 @@ def discover_packages(base_paths: List[Path]) -> List[UvPackage]:
     return projects
 
 
+def _resolve_python_version(project: UvPackage) -> str:
+    """Resolve the Python version to use for a project's virtual environment.
+
+    Checks in order:
+      1. .python-version file in the project directory
+      2. requires-python field in pyproject.toml
+      3. The interpreter running colcon (sys.executable)
+    """
+    # 1. .python-version (uv / pyenv convention)
+    python_version_file = project.path / ".python-version"
+    if python_version_file.exists():
+        version = python_version_file.read_text().strip()
+        if version:
+            logger.info(f"Using Python version from .python-version: {version}")
+            return version
+
+    # 2. requires-python from pyproject.toml
+    requires_python = project.pyproject_data.get("project", {}).get(
+        "requires-python", ""
+    )
+    if requires_python:
+        logger.info(f"Using requires-python from pyproject.toml: {requires_python}")
+        return requires_python
+
+    # 3. Fallback to the Python running colcon
+    logger.info(f"Using colcon's Python: {sys.executable}")
+    return sys.executable
+
+
 def install_dependencies(
     project: UvPackage, install_base: Path, merge_install: bool
 ) -> None:
@@ -114,12 +143,25 @@ def install_dependencies(
     # Venv path - this should be /install/PACKAGE_NAME/venv/
     venv_path = install_base / "venv"
 
-    # Create virtual environment at the target location with system packages access
+    # Determine the Python version for the virtual environment.
+    # Priority:
+    #   1. .python-version file in the project directory (uv convention)
+    #   2. requires-python from pyproject.toml
+    #   3. sys.executable (the Python running colcon / ROS)
+    # Without an explicit version, uv defaults to the highest Python on the
+    # system, which can break Boost.Python, ROS system packages, etc.
+    python_version = _resolve_python_version(project)
+
     # --system-site-packages is needed because ROS 2 packages like rclpy are installed
     # system-wide (not available on PyPI) and our nodes need access to them
     try:
         subprocess.run(
-            ["uv", "venv", "--system-site-packages", str(venv_path)],
+            [
+                "uv", "venv",
+                "--system-site-packages",
+                "--python", python_version,
+                str(venv_path),
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -143,6 +185,26 @@ def install_dependencies(
     else:
         install_target = str(project.path)
 
+    # Build override arguments from [tool.uv].override-dependencies.
+    # uv pip install does not read override-dependencies from pyproject.toml,
+    # so we materialise them into a temporary requirements file and pass it
+    # via --override.
+    override_args: List[str] = []
+    override_deps = (
+        project.pyproject_data.get("tool", {})
+        .get("uv", {})
+        .get("override-dependencies", [])
+    )
+    override_file: Optional[Path] = None
+    if override_deps:
+        import tempfile
+        override_file = Path(
+            tempfile.mktemp(prefix="colcon_uv_override_", suffix=".txt")
+        )
+        override_file.write_text("\n".join(override_deps) + "\n")
+        override_args = ["--override", str(override_file)]
+        logger.info(f"Using override-dependencies: {override_deps}")
+
     try:
         subprocess.run(
             [
@@ -152,6 +214,7 @@ def install_dependencies(
                 "install",
                 "--python",
                 str(python_exe),
+                *override_args,
                 "-e",
                 install_target,
             ],
@@ -181,13 +244,15 @@ def install_dependencies(
         logger.info(f"Installing dependency groups: {', '.join(group_names)}")
 
         cmd = ["uv", "--no-progress", "pip", "install", "--python", str(python_exe)]
+        cmd.extend(override_args)
         for group in group_names:
             cmd.extend(["--group", group])
-        cmd.append(str(project.path))
+        cmd.append(".")
 
         try:
             subprocess.run(
-                cmd, check=True, stdout=sys.stdout, stderr=sys.stderr, text=True
+                cmd, check=True, stdout=sys.stdout, stderr=sys.stderr, text=True,
+                cwd=str(project.path),
             )
         except subprocess.CalledProcessError as e:
             # UV writes its errors to stderr, pass them through to user
@@ -201,6 +266,10 @@ def install_dependencies(
             # Re-raise without the traceback by using sys.exit
             # This prevents colcon from printing the full Python traceback
             sys.exit(1)
+
+    # Clean up the temporary override file
+    if override_file and override_file.exists():
+        override_file.unlink()
 
 
 def install_dependencies_from_descriptor(
