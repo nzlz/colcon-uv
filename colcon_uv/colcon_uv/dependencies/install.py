@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import List, Optional
 
@@ -241,6 +242,18 @@ def install_dependencies(
     # Skip recreation if the venv already exists so incremental builds are fast
     # and pre-seeded packages are not clobbered.
     if not (venv_path / "bin" / "python").exists():
+        # A version resolved from .python-version / requires-python may select
+        # (or download) an interpreter other than the one running colcon. Since
+        # the venv is created with --system-site-packages so ROS packages built
+        # for the system Python (e.g. rclpy) are importable, a mismatched
+        # interpreter can break those imports. Warn so the cause is visible.
+        if python_version != sys.executable:
+            logger.warning(
+                f"venv Python ({python_version}) differs from colcon's "
+                f"interpreter ({sys.executable}); with --system-site-packages, "
+                f"system ROS packages built for a different Python may fail to "
+                f"import"
+            )
         try:
             subprocess.run(
                 [
@@ -291,71 +304,36 @@ def install_dependencies(
     )
     override_file: Optional[Path] = None
     if override_deps:
-        import tempfile
-        override_file = Path(
-            tempfile.mktemp(prefix="colcon_uv_override_", suffix=".txt")
-        )
-        override_file.write_text("\n".join(override_deps) + "\n")
+        # mkstemp avoids the race/security issues of the deprecated mktemp.
+        fd, tmp_name = tempfile.mkstemp(prefix="colcon_uv_override_", suffix=".txt")
+        with os.fdopen(fd, "w") as f:
+            f.write("\n".join(override_deps) + "\n")
+        override_file = Path(tmp_name)
         override_args = ["--override", str(override_file)]
         logger.info(f"Using override-dependencies: {override_deps}")
 
+    # The override file (if any) must outlive both install calls and be removed
+    # even when an install fails -- the error paths below call sys.exit() -- so
+    # the cleanup lives in a finally block.
     try:
-        subprocess.run(
-            [
-                "uv",
-                "--no-progress",
-                "pip",
-                "install",
-                *index_flags,
-                "--python",
-                str(python_exe),
-                *override_args,
-                "-e",
-                install_target,
-            ],
-            check=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            text=True,
-        )
-    except subprocess.CalledProcessError as e:
-        # UV writes its errors to stderr, pass them through to user
-        if e.stderr:
-            sys.stderr.write(e.stderr)
-            sys.stderr.flush()
-
-        # Log simply without the exception details
-        logger.error(f"Failed to install dependencies for {install_target}")
-
-        # Re-raise without the traceback by using sys.exit
-        # This prevents colcon from printing the full Python traceback
-        sys.exit(1)
-
-    # Additionally, install dependency groups (PEP 735) if present
-    dependency_groups = project.pyproject_data.get("dependency-groups", {})
-
-    if dependency_groups:
-        group_names = list(dependency_groups.keys())
-        logger.info(f"Installing dependency groups: {', '.join(group_names)}")
-
-        cmd = [
-            "uv",
-            "--no-progress",
-            "pip",
-            "install",
-            *index_flags,
-            *override_args,
-            "--python",
-            str(python_exe),
-        ]
-        for group in group_names:
-            cmd.extend(["--group", group])
-        cmd.append(".")
-
         try:
             subprocess.run(
-                cmd, check=True, stdout=sys.stdout, stderr=sys.stderr, text=True,
-                cwd=str(project.path),
+                [
+                    "uv",
+                    "--no-progress",
+                    "pip",
+                    "install",
+                    *index_flags,
+                    "--python",
+                    str(python_exe),
+                    *override_args,
+                    "-e",
+                    install_target,
+                ],
+                check=True,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                text=True,
             )
         except subprocess.CalledProcessError as e:
             # UV writes its errors to stderr, pass them through to user
@@ -364,15 +342,58 @@ def install_dependencies(
                 sys.stderr.flush()
 
             # Log simply without the exception details
-            logger.error(f"Failed to install dependency groups for {project.name}")
+            logger.error(f"Failed to install dependencies for {install_target}")
 
             # Re-raise without the traceback by using sys.exit
             # This prevents colcon from printing the full Python traceback
             sys.exit(1)
 
-    # Clean up the temporary override file
-    if override_file and override_file.exists():
-        override_file.unlink()
+        # Additionally, install dependency groups (PEP 735) if present
+        dependency_groups = project.pyproject_data.get("dependency-groups", {})
+
+        if dependency_groups:
+            group_names = list(dependency_groups.keys())
+            logger.info(f"Installing dependency groups: {', '.join(group_names)}")
+
+            cmd = [
+                "uv",
+                "--no-progress",
+                "pip",
+                "install",
+                *index_flags,
+                *override_args,
+                "--python",
+                str(python_exe),
+            ]
+            for group in group_names:
+                cmd.extend(["--group", group])
+            cmd.append(".")
+
+            try:
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    stdout=sys.stdout,
+                    stderr=sys.stderr,
+                    text=True,
+                    cwd=str(project.path),
+                )
+            except subprocess.CalledProcessError as e:
+                # UV writes its errors to stderr, pass them through to user
+                if e.stderr:
+                    sys.stderr.write(e.stderr)
+                    sys.stderr.flush()
+
+                # Log simply without the exception details
+                logger.error(f"Failed to install dependency groups for {project.name}")
+
+                # Re-raise without the traceback by using sys.exit
+                # This prevents colcon from printing the full Python traceback
+                sys.exit(1)
+    finally:
+        # Clean up the temporary override file, even on failure.
+        if override_file and override_file.exists():
+            override_file.unlink()
 
 
 def install_dependencies_from_descriptor(
