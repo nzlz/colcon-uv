@@ -201,20 +201,23 @@ def install_dependencies(
     # Create virtual environment at the target location with system packages access
     # --system-site-packages is needed because ROS 2 packages like rclpy are installed
     # system-wide (not available on PyPI) and our nodes need access to them
-    try:
-        subprocess.run(
-            ["uv", "venv", "--system-site-packages", str(venv_path)],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to create venv: {e.stderr}")
-        raise
+    # Skip recreation if the venv already exists so incremental builds are fast
+    # and pre-seeded packages are not clobbered.
+    if not (venv_path / "bin" / "python").exists():
+        try:
+            subprocess.run(
+                ["uv", "venv", "--system-site-packages", str(venv_path)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to create venv: {e.stderr}")
+            raise
 
-    # Pre-seed the venv with packages from extra-site-packages paths so that
-    # uv sees them as already installed and does not re-fetch from PyPI.
-    _preseed_extra_site_packages(project, venv_path)
+        # Pre-seed the venv with packages from extra-site-packages paths so that
+        # uv sees them as already installed and does not re-fetch from PyPI.
+        _preseed_extra_site_packages(project, venv_path)
 
     # Install dependencies and the package itself to the target venv
     # Use --python to specify the target venv's python
