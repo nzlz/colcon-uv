@@ -191,8 +191,16 @@ def _resolve_python_version(project: UvPackage) -> str:
     # 1. .python-version (uv / pyenv convention)
     python_version_file = project.path / ".python-version"
     if python_version_file.exists():
-        version = python_version_file.read_text().strip()
-        if version:
+        # uv allows several versions, one per line; the first is the primary
+        # interpreter, so use that rather than the whole (possibly multi-line)
+        # file contents.
+        versions = [
+            line.strip()
+            for line in python_version_file.read_text().splitlines()
+            if line.strip()
+        ]
+        if versions:
+            version = versions[0]
             logger.info(f"Using Python version from .python-version: {version}")
             return version
 
@@ -228,20 +236,20 @@ def install_dependencies(
     # Venv path - this should be /install/PACKAGE_NAME/venv/
     venv_path = install_base / "venv"
 
-    # Determine the Python version for the virtual environment.
-    # Priority:
-    #   1. .python-version file in the project directory (uv convention)
-    #   2. requires-python from pyproject.toml
-    #   3. sys.executable (the Python running colcon / ROS)
-    # Without an explicit version, uv defaults to the highest Python on the
-    # system, which can break Boost.Python, ROS system packages, etc.
-    python_version = _resolve_python_version(project)
-
     # --system-site-packages is needed because ROS 2 packages like rclpy are installed
     # system-wide (not available on PyPI) and our nodes need access to them
     # Skip recreation if the venv already exists so incremental builds are fast
     # and pre-seeded packages are not clobbered.
     if not (venv_path / "bin" / "python").exists():
+        # Determine the Python version for the virtual environment.
+        # Priority:
+        #   1. .python-version file in the project directory (uv convention)
+        #   2. requires-python from pyproject.toml
+        #   3. sys.executable (the Python running colcon / ROS)
+        # Without an explicit version, uv defaults to the highest Python on the
+        # system, which can break Boost.Python, ROS system packages, etc.
+        python_version = _resolve_python_version(project)
+
         # A version resolved from .python-version / requires-python may select
         # (or download) an interpreter other than the one running colcon. Since
         # the venv is created with --system-site-packages so ROS packages built
@@ -272,9 +280,12 @@ def install_dependencies(
             logger.error(f"Failed to create venv: {e.stderr}")
             raise
 
-        # Pre-seed the venv with packages from extra-site-packages paths so that
-        # uv sees them as already installed and does not re-fetch from PyPI.
-        _preseed_extra_site_packages(project, venv_path)
+    # Pre-seed the venv with packages from extra-site-packages paths so that
+    # uv sees them as already installed and does not re-fetch from PyPI. Run on
+    # every build (it is idempotent -- existing dist-info copies are skipped) so
+    # newly added extra-site-packages take effect on a rebuild without having to
+    # delete the venv first.
+    _preseed_extra_site_packages(project, venv_path)
 
     # Install dependencies and the package itself to the target venv
     # Use --python to specify the target venv's python
