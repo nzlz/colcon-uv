@@ -122,6 +122,50 @@ class TestGetIndexFlags(unittest.TestCase):
         )
 
 
+class TestResolvePythonVersion(unittest.TestCase):
+    """Test _resolve_python_version helper."""
+
+    def setUp(self):
+        from colcon_uv.dependencies.install import (
+            UvPackage,
+            _resolve_python_version,
+        )
+
+        self.UvPackage = UvPackage
+        self._resolve_python_version = _resolve_python_version
+
+    def _make_package(self, pyproject_content, python_version_file=None):
+        """Create a temporary UvPackage, optionally with a .python-version."""
+        self._tmpdir = tempfile.mkdtemp()
+        pkg_dir = Path(self._tmpdir) / "pkg"
+        pkg_dir.mkdir()
+        (pkg_dir / "pyproject.toml").write_text(pyproject_content)
+        if python_version_file is not None:
+            (pkg_dir / ".python-version").write_text(python_version_file)
+        return self.UvPackage(pkg_dir)
+
+    def test_python_version_file_takes_priority(self):
+        pkg = self._make_package(
+            '[project]\nrequires-python = ">=3.11"\n'
+            '[tool.colcon-uv-ros]\nname = "test"',
+            python_version_file="3.10\n",
+        )
+        self.assertEqual(self._resolve_python_version(pkg), "3.10")
+
+    def test_requires_python_when_no_version_file(self):
+        pkg = self._make_package(
+            '[project]\nrequires-python = ">=3.8,<3.11"\n'
+            '[tool.colcon-uv-ros]\nname = "test"'
+        )
+        self.assertEqual(self._resolve_python_version(pkg), ">=3.8,<3.11")
+
+    def test_falls_back_to_colcon_interpreter(self):
+        import sys
+
+        pkg = self._make_package('[tool.colcon-uv-ros]\nname = "test"')
+        self.assertEqual(self._resolve_python_version(pkg), sys.executable)
+
+
 class TestDependenciesInstall(unittest.TestCase):
     """Test UV dependencies installation functionality."""
 
@@ -288,6 +332,75 @@ find-links = ["/opt/jetson-wheels"]
             self.assertIn("https://download.pytorch.org/whl/cu128", pip_cmd)
             self.assertIn("--find-links", pip_cmd)
             self.assertIn("/opt/jetson-wheels", pip_cmd)
+
+    @patch("subprocess.run")
+    def test_install_passes_override_dependencies(self, mock_run):
+        """override-dependencies are materialised and passed via --override."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            desc = PackageDescriptor(temp_path)
+            desc.name = "test_package"
+
+            pyproject_content = """
+[project]
+dependencies = ["numpy"]
+
+[tool.colcon-uv-ros]
+name = "test_package"
+
+[tool.uv]
+override-dependencies = ["numpy==1.26.4"]
+"""
+            (temp_path / "pyproject.toml").write_text(pyproject_content)
+
+            install_base = Path(temp_dir) / "install"
+            mock_run.return_value = MagicMock(returncode=0)
+
+            self.install_dependencies_from_descriptor(desc, install_base, False)
+
+            pip_calls = [c for c in mock_run.call_args_list if "pip" in str(c)]
+            pip_cmd = pip_calls[0][0][0]
+            self.assertIn("--override", pip_cmd)
+
+            # The override path must point at a written requirements file...
+            override_path = Path(pip_cmd[pip_cmd.index("--override") + 1])
+            # ...and must be cleaned up after install completes.
+            self.assertFalse(
+                override_path.exists(), "override temp file was not cleaned up"
+            )
+
+    @patch("subprocess.run")
+    def test_dependency_groups_run_in_project_cwd(self, mock_run):
+        """Dependency-group installs run from the project dir with '.' target."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            desc = PackageDescriptor(temp_path)
+            desc.name = "test_package"
+
+            pyproject_content = """
+[project]
+dependencies = ["numpy"]
+
+[tool.colcon-uv-ros]
+name = "test_package"
+
+[dependency-groups]
+test = ["pytest"]
+"""
+            (temp_path / "pyproject.toml").write_text(pyproject_content)
+
+            install_base = Path(temp_dir) / "install"
+            mock_run.return_value = MagicMock(returncode=0)
+
+            self.install_dependencies_from_descriptor(desc, install_base, False)
+
+            group_calls = [c for c in mock_run.call_args_list if "--group" in str(c)]
+            self.assertEqual(len(group_calls), 1)
+            cmd = group_calls[0][0][0]
+            self.assertEqual(cmd[-1], ".")
+            self.assertEqual(group_calls[0].kwargs.get("cwd"), str(temp_path))
 
     @patch("subprocess.run")
     def test_install_dependencies_merge_install(self, mock_run):
