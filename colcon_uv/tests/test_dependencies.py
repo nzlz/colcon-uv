@@ -1,6 +1,7 @@
 """Tests for UV dependencies installation."""
 
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -159,9 +160,14 @@ class TestResolvePythonVersion(unittest.TestCase):
         )
         self.assertEqual(self._resolve_python_version(pkg), ">=3.8,<3.11")
 
-    def test_falls_back_to_colcon_interpreter(self):
-        import sys
+    def test_multiline_python_version_uses_first(self):
+        pkg = self._make_package(
+            '[tool.colcon-uv-ros]\nname = "test"',
+            python_version_file="3.10\n3.11\n",
+        )
+        self.assertEqual(self._resolve_python_version(pkg), "3.10")
 
+    def test_falls_back_to_colcon_interpreter(self):
         pkg = self._make_package('[tool.colcon-uv-ros]\nname = "test"')
         self.assertEqual(self._resolve_python_version(pkg), sys.executable)
 
@@ -173,12 +179,10 @@ class TestDependenciesInstall(unittest.TestCase):
         """Set up test fixtures."""
         from colcon_uv.dependencies.install import (
             discover_packages,
-            install_dependencies,
             install_dependencies_from_descriptor,
         )
 
         self.discover_packages = discover_packages
-        self.install_dependencies = install_dependencies
         self.install_dependencies_from_descriptor = install_dependencies_from_descriptor
 
     def test_discover_packages_empty_directory(self):
