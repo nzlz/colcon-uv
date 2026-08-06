@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+import contextlib
+import os
+import sys
+
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-import numpy as np
-import sys
-import os
 
 
 class PingNode(Node):
@@ -57,11 +59,9 @@ def main(args=None):
         pass
     finally:
         ping_node.destroy_node()
-        try:
+        # Ignore shutdown errors (common in launch files)
+        with contextlib.suppress(Exception):
             rclpy.shutdown()
-        except Exception:
-            # Ignore shutdown errors (common in launch files)
-            pass
 
 
 if __name__ == "__main__":
