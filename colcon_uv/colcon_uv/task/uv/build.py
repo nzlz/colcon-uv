@@ -136,8 +136,24 @@ class UvBuildTask(TaskExtensionPoint):
         lib_dir = Path(args.install_base) / "lib" / pkg.name
         lib_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create symlinks for each executable
-        venv_bin = Path(args.install_base) / "venv" / "bin"
+        # Locate the venv. install_dependencies() appends the package name
+        # when install_base is not already package-specific, so the venv can
+        # sit in either place depending on how it was invoked:
+        #
+        #   isolated build      install_base = <ws>/install/<pkg>  -> <base>/venv
+        #   --merge-install     install_base = <ws>/install        -> <base>/<pkg>/venv
+        #
+        # Only the first was checked, so under --merge-install this step found
+        # nothing, silently created lib/<pkg>/ and left it empty -- and
+        # `ros2 run <pkg> <script>` could not find the executable.
+        install_root = Path(args.install_base)
+        venv_bin_candidates = [
+            install_root / pkg.name / "venv" / "bin",
+            install_root / "venv" / "bin",
+        ]
+        venv_bin = next(
+            (c for c in venv_bin_candidates if c.is_dir()), venv_bin_candidates[-1]
+        )
 
         for script_name, _entry_point in scripts.items():
             venv_executable = venv_bin / script_name
