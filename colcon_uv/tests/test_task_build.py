@@ -215,6 +215,58 @@ data-files = {
             result = await task._add_data_files()
             self.assertEqual(result, 1)
 
+    def _run_symlink_case(self, temp_path, install_base, venv_parent):
+        """Build a package tree and run _create_executable_symlinks over it."""
+        (temp_path / "pyproject.toml").write_text(
+            """
+[project]
+name = "test_package"
+scripts = {my_node = "test_package.node:main"}
+"""
+        )
+
+        venv_bin = venv_parent / "venv" / "bin"
+        venv_bin.mkdir(parents=True, exist_ok=True)
+        (venv_bin / "my_node").write_text("#!/usr/bin/env python3\n")
+
+        task = self.task_class()
+        task.context = MagicMock()
+        task.context.pkg = MagicMock()
+        task.context.pkg.path = temp_path
+        task.context.pkg.name = "test_package"
+        task.context.args = MagicMock()
+        task.context.args.install_base = str(install_base)
+
+        task._create_executable_symlinks()
+        return install_base / "lib" / "test_package" / "my_node"
+
+    def test_create_executable_symlinks_isolated_install(self):
+        """Isolated install: install_base is already package-specific."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            install_base = temp_path / "install" / "test_package"
+            link = self._run_symlink_case(temp_path, install_base, install_base)
+            self.assertTrue(link.is_symlink(), "executable symlink was not created")
+
+    def test_create_executable_symlinks_merge_install(self):
+        """Merge install: the venv still lives under install_base/<pkg>.
+
+        Regression test. This step used to look for the venv at
+        install_base/venv, which only holds for isolated installs, so under
+        --merge-install it silently created lib/<pkg>/ and left it empty --
+        `ros2 run <pkg> <script>` then could not find the executable.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            install_base = temp_path / "install"
+            link = self._run_symlink_case(
+                temp_path, install_base, install_base / "test_package"
+            )
+            self.assertTrue(
+                link.is_symlink(),
+                "executable symlink was not created under --merge-install",
+            )
+
     def test_create_executable_symlinks_no_pyproject(self):
         """Test _create_executable_symlinks with no pyproject.toml."""
         with tempfile.TemporaryDirectory() as temp_dir:
