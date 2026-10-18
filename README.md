@@ -4,7 +4,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-70%25-brightgreen)](https://github.com/nzlz/colcon-uv/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/colcon-uv.svg)](https://pypi.org/project/colcon-uv/)
 
-A **colcon extension** for building and testing Python packages that use **[uv](https://github.com/astral-sh/uv)** for dependency management.
+A **colcon extension** for building and testing Python packages that use **[uv](https://github.com/astral-sh/uv)** for dependency management, and C++ `ament_cmake` packages whose dependencies come from PyPI.
 
 Intended, but not limited, to use with **ROS 2**. This extension provides a modern alternative to traditional setuptools-based or even poetry-based Python package management in ROS environments.
 
@@ -16,6 +16,7 @@ Intended, but not limited, to use with **ROS 2**. This extension provides a mode
 - **Modern Python Packaging**: Support for `pyproject.toml`-based packages following PEP 517/518 standards
 - **ROS Integration**: Seamless integration with colcon build system and ROS package management
 - **Dependency Isolation**: Prevents dependency conflicts between packages
+- **C++ packages with PyPI dependencies**: an `ament_cmake` package can take libraries that ship as wheels (CasADi, cmeel-packaged Eigen, ...) from its own venv
 
 ## Installation
 
@@ -51,8 +52,8 @@ pip install --break-system-packages --target /usr/lib/python3/dist-packages -e c
 
 For practical examples, see the test examples in this repository:
 
-- **`ament_cmake`** for C++/Python hybrid packages [`tests/examples/uv_ament_cmake_example`](tests/examples/uv_ament_cmake_example/pyproject.toml)
-- **`ament_python`** for pure Python packages [`tests/examples/uv_ament_python_example`](tests/examples/uv_ament_python_example/pyproject.toml)
+- **Python packages** built by colcon-uv: [`tests/examples/uv_ament_python_example`](tests/examples/uv_ament_python_example/pyproject.toml), and [`tests/examples/uv_ament_cmake_example`](tests/examples/uv_ament_cmake_example/pyproject.toml) (a Python package that also carries a `CMakeLists.txt`; colcon-uv builds it as Python and the CMake file is not used)
+- **C++ packages built by ament_cmake** with PyPI dependencies (`build-type = "ament_cmake"`): [`tests/examples/uv_cpp_example`](tests/examples/uv_cpp_example/pyproject.toml), which builds against Eigen from the `cmeel-eigen` wheel
 
 ## Usage
 
@@ -71,14 +72,14 @@ Similar to `rosdep install`, you can optionally install dependencies standalone 
 
 ```bash
 # Install dependencies for all packages in src/
-colcon uv install
+colcon uv install --base-paths src
 ```
 
 **Note**: This step is optional since `colcon build` automatically handles dependency installation. Use this when you want to pre-install dependencies or troubleshoot dependency issues separately from the build process.
 
 ## Configuration
 
-Refer to [colcon_uv/README.md](colcon_uv/README.md#configuration)
+Refer to [colcon_uv/README.md](colcon_uv/README.md#configuration), and to [CHANGELOG.md](CHANGELOG.md) for what changed between versions.
 
 ## References
 
