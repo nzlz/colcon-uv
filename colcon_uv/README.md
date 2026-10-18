@@ -127,7 +127,8 @@ At run time, the venv's shared libraries are found through the RPATH: link with 
 
 ```cmake
 find_package(casadi CONFIG REQUIRED)  # site-packages/casadi/cmake in install/<package>/venv
-get_filename_component(CASADI_LIB_DIR "${casadi_DIR}/.." ABSOLUTE)  # libcasadi.so lives there
-target_link_libraries(my_node casadi)
+get_target_property(_casadi_lib casadi::casadi IMPORTED_LOCATION_RELEASE)
+get_filename_component(CASADI_LIB_DIR "${_casadi_lib}" DIRECTORY)
+target_link_libraries(my_node casadi::casadi)
 set_target_properties(my_node PROPERTIES INSTALL_RPATH "${CASADI_LIB_DIR}")
 ```
