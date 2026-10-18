@@ -101,7 +101,23 @@ jobs:
         run: |
           cd /ros2_ws
           source /opt/ros/${ROS_DISTRO}/setup.bash
-          colcon build --packages-select uv_ament_python_example uv_ament_cmake_example --symlink-install
+          colcon build --packages-select uv_ament_python_example uv_ament_cmake_example uv_cpp_example --symlink-install
+
+      - name: Test C++ package with PyPI dependencies
+        run: |
+          cd /ros2_ws
+          source /opt/ros/${ROS_DISTRO}/setup.bash
+          # Eigen must come from the package's venv (cmeel-eigen), not from a system copy
+          eigen_dir=$(sed -n 's/^Eigen3_DIR:PATH=//p' build/uv_cpp_example/CMakeCache.txt)
+          echo "Eigen3_DIR=${eigen_dir}"
+          case "${eigen_dir}" in
+            /ros2_ws/install/uv_cpp_example/venv/*) ;;
+            *) echo "Eigen3 was not found in the venv"; exit 1 ;;
+          esac
+          colcon list --packages-select uv_cpp_example | grep -q "(ros.ament_cmake.uv)"
+          source install/setup.bash
+          ros2 run uv_cpp_example uv_cpp_example | tee /tmp/uv_cpp_example.out
+          grep -q "solved x = 0.8 1.4" /tmp/uv_cpp_example.out
 
       - name: Test ping-pong communication
         run: |

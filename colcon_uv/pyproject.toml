@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "colcon-uv"
 dynamic = ["version"]
-description = "A Colcon extension providing support for Python projects that use UV"
+description = "A Colcon extension for ROS packages with PyPI dependencies managed by UV (Python, and C++ built by ament_cmake)"
 readme = "README.md"
 license = {text = "BSD-3-Clause"}
 authors = [
@@ -39,9 +39,11 @@ uv = "colcon_uv.package_identification.uv:UvPackageIdentification"
 
 [project.entry-points."colcon_core.task.build"]
 "uv.python" = "colcon_uv.task.uv.build:UvBuildTask"
+"ros.ament_cmake.uv" = "colcon_uv.task.uv.ament_cmake:UvAmentCmakeBuildTask"
 
 [project.entry-points."colcon_core.task.test"]
 "uv.python" = "colcon_uv.task.uv.test:UvTestTask"
+"ros.ament_cmake.uv" = "colcon_uv.task.uv.ament_cmake:UvAmentCmakeTestTask"
 
 [project.entry-points."colcon_core.verb"]
 "uv" = "colcon_uv.cli:UvVerb"

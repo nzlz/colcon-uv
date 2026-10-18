@@ -1,0 +1,11 @@
+# Only the PyPI dependencies live here: the package itself is built by ament_cmake.
+[project]
+name = "uv-cpp-example"
+version = "0.1.0"
+dependencies = [
+    # Eigen as a wheel with a CMake package (site-packages/cmeel.prefix/share/eigen3/cmake).
+    "cmeel-eigen==3.4.0.2",
+]
+
+[tool.colcon-uv-ros]
+build-type = "ament_cmake"
