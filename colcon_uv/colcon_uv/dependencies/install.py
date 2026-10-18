@@ -12,6 +12,8 @@ from typing import List, Optional
 
 import tomli
 
+from colcon_uv.build_type import AMENT_CMAKE, build_type, package_xml_name
+
 logger = logging.getLogger("colcon.uv.dependencies")
 
 
@@ -54,6 +56,13 @@ class UvPackage:
             self.name = self.pyproject_data["project"]["name"]
         else:
             self.name = path.name
+
+        # python: the package itself and its dependencies go into the venv; ament_cmake: only its
+        # dependencies (ament_cmake builds the package)
+        self.build_type = build_type(self.pyproject_data)
+        if self.build_type == AMENT_CMAKE:
+            # The ROS package name keys the venv (install/<pkg>/venv), as colcon names the package
+            self.name = package_xml_name(path) or self.name
 
 
 def main():
@@ -217,10 +226,16 @@ def _resolve_python_version(project: UvPackage) -> str:
     return sys.executable
 
 
+def venv_site_packages(venv_path: Path) -> Optional[Path]:
+    """The site-packages directory of a venv (None before the venv exists)."""
+    candidates = sorted((venv_path / "lib").glob("python*/site-packages"))
+    return candidates[0] if candidates else None
+
+
 def install_dependencies(
     project: UvPackage, install_base: Path, merge_install: bool
-) -> None:
-    """Install dependencies for a UV package using UV."""
+) -> Path:
+    """Install dependencies for a UV package using UV; returns the package's venv."""
     # Handle both contexts:
     # 1. Direct install: install_base = /install, need to add package name
     # 2. Build task: install_base = /install/package_name, already included
@@ -291,6 +306,10 @@ def install_dependencies(
     # Use --python to specify the target venv's python
     python_exe = venv_path / "bin" / "python"
     index_flags = _get_index_flags(project)
+
+    if project.build_type == AMENT_CMAKE:
+        _install_requirements_only(project, python_exe, index_flags)
+        return venv_path
 
     optional_deps = project.pyproject_data.get("project", {}).get(
         "optional-dependencies", {}
@@ -406,6 +425,69 @@ def install_dependencies(
         if override_file and override_file.exists():
             override_file.unlink()
 
+    return venv_path
+
+
+def _install_requirements_only(
+    project: UvPackage, python_exe: Path, index_flags: List[str]
+) -> None:
+    """Install a package's PyPI dependencies, but not the package, into its venv.
+
+    For an ament_cmake package: ament_cmake builds and installs it, and its pyproject.toml has
+    no Python project to install (and may have no build backend). Its [project] dependencies,
+    every optional-dependencies extra and every dependency group (PEP 735) are installed, from
+    the pyproject.toml itself (``-r``), with the same index flags and overrides as a Python
+    package.
+    """
+    pyproject = project.pyproject_data
+    cmd = [
+        "uv",
+        "--no-progress",
+        "pip",
+        "install",
+        *index_flags,
+        "--python",
+        # absolute: uv runs in the package directory (for -r pyproject.toml)
+        str(Path(python_exe).absolute()),
+        "-r",
+        "pyproject.toml",
+    ]
+    if pyproject.get("project", {}).get("optional-dependencies"):
+        cmd.append("--all-extras")
+    for group in pyproject.get("dependency-groups", {}):
+        cmd.extend(["--group", group])
+
+    override_deps = (
+        pyproject.get("tool", {}).get("uv", {}).get("override-dependencies", [])
+    )
+    override_file: Optional[Path] = None
+    if override_deps:
+        fd, tmp_name = tempfile.mkstemp(prefix="colcon_uv_override_", suffix=".txt")
+        with os.fdopen(fd, "w") as f:
+            f.write("\n".join(override_deps) + "\n")
+        override_file = Path(tmp_name)
+        cmd.extend(["--override", str(override_file)])
+
+    logger.info(f"Installing the PyPI dependencies of {project.name} (ament_cmake)")
+    try:
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            text=True,
+            cwd=str(project.path),
+        )
+    except subprocess.CalledProcessError as e:
+        if e.stderr:
+            sys.stderr.write(e.stderr)
+            sys.stderr.flush()
+        logger.error(f"Failed to install the dependencies of {project.name}")
+        sys.exit(1)
+    finally:
+        if override_file and override_file.exists():
+            override_file.unlink()
+
 
 def install_dependencies_from_descriptor(
     pkg_descriptor, install_base: Path, merge_install: bool
@@ -416,11 +498,11 @@ def install_dependencies_from_descriptor(
     """
     try:
         uv_package = UvPackage(pkg_descriptor.path)
-        install_dependencies(uv_package, install_base, merge_install)
     except NotAUvPackageError as e:
         # Skip packages that aren't UV packages
         logger.debug(f"Skipping non-UV package {pkg_descriptor.name}: {e}")
-        return
+        return None
+    return install_dependencies(uv_package, install_base, merge_install)
 
 
 def _parse_args() -> argparse.Namespace:
