@@ -86,7 +86,3 @@ This project is inspired by and builds upon:
 - [colcon-poetry-ros](https://github.com/UrbanMachine/colcon-poetry-ros) - Poetry integration for ROS packages
 - [colcon-ros](https://github.com/colcon/colcon-ros/tree/colcon-python-project) - Experimental ROS support for colcon
 - [uv](https://github.com/astral-sh/uv) - An extremely fast Python package installer and resolver
-
-## Acknowledgments
-
-Built with the assistance of [Cursor](https://cursor.sh) - AI-powered code editor.
