@@ -1,0 +1,94 @@
+name: Build Debian package
+
+# Builds python3-colcon-uv with stdeb, the way publish-python does for the
+# packages.ros.org release, then installs it from apt and builds the example
+# packages with it. Runs on pull requests and on version tags; the PyPI upload
+# stays in publish.yml, and this workflow uploads nothing to PyPI.
+
+on:
+  push:
+    branches: [main, develop]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  deb:
+    name: ${{ matrix.ros_distro }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ros:${{ matrix.ros_distro }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro: [humble, jazzy]  # Ubuntu 22.04 jammy, Ubuntu 24.04 noble
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            debhelper dh-python fakeroot python3-all python3-pip python3-setuptools
+          # The python3-stdeb of Ubuntu 24.04 does not run on Python 3.12;
+          # publish-python installs stdeb from PyPI too.
+          pip3 install "stdeb>=0.11" || pip3 install --break-system-packages "stdeb>=0.11"
+
+      - name: Build the Debian package
+        working-directory: colcon_uv
+        run: |
+          python3 setup.py --command-packages=stdeb.command sdist_dsc bdist_deb
+          ls -l deb_dist/*.deb
+          dpkg-deb --info deb_dist/python3-colcon-uv_*.deb
+
+      - name: Install the Debian package
+        run: |
+          apt-get install -y ./colcon_uv/deb_dist/python3-colcon-uv_*.deb
+          # Installed from apt, not from the source tree
+          cd /
+          python3 -c "import colcon_uv, sys; print(colcon_uv.__file__); sys.exit(not colcon_uv.__file__.startswith('/usr/lib/python3/dist-packages/'))"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build the example packages with the Debian package
+        run: |
+          source /opt/ros/${ROS_DISTRO}/setup.bash
+          mkdir -p /ros2_ws/src
+          cp -r tests/examples /ros2_ws/src/
+          cd /ros2_ws
+          colcon list | tee /tmp/colcon_list.out
+          grep -q "uv_ament_python_example.*(uv.python)" /tmp/colcon_list.out
+          grep -q "uv_cpp_example.*(ros.ament_cmake.uv)" /tmp/colcon_list.out
+          colcon uv --help
+          colcon build --packages-select uv_ament_python_example uv_cpp_example
+          source install/setup.bash
+          ros2 run uv_cpp_example uv_cpp_example | tee /tmp/uv_cpp_example.out
+          grep -q "solved x = 0.8 1.4" /tmp/uv_cpp_example.out
+
+      - name: Upload the Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: python3-colcon-uv-${{ matrix.ros_distro }}-${{ matrix.arch }}
+          path: colcon_uv/deb_dist/python3-colcon-uv_*.deb
+          if-no-files-found: error
