@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- When the `uv` executable is not on `PATH`, the build and `colcon uv install` stop with an error that says how to install uv, instead of a `FileNotFoundError` traceback.
+
 ## 0.5.1
 
 - README: no longer marked experimental; acknowledgments section removed. No code changes.

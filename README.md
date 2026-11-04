@@ -18,6 +18,8 @@ Intended, but not limited, to use with **ROS 2**. This extension provides a mode
 
 ## Installation
 
+**Prerequisite**: colcon-uv runs the [`uv`](https://docs.astral.sh/uv/getting-started/installation/) executable, which must be on `PATH` (uv is not available from the Ubuntu or ROS apt repositories). Install it with, for example, `curl -LsSf https://astral.sh/uv/install.sh | sh` or `pipx install uv`. If uv is missing, the build stops with an error saying so.
+
 **Important**: This extension must be installed in the same environment as colcon to be discoverable by colcon's plugin system. Typically this means system-wide installation.
 
 ### Install from PyPi (last tagged version)
