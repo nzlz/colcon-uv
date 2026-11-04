@@ -86,3 +86,11 @@ This project is inspired by and builds upon:
 - [colcon-poetry-ros](https://github.com/UrbanMachine/colcon-poetry-ros) - Poetry integration for ROS packages
 - [colcon-ros](https://github.com/colcon/colcon-ros/tree/colcon-python-project) - Experimental ROS support for colcon
 - [uv](https://github.com/astral-sh/uv) - An extremely fast Python package installer and resolver
+
+## License
+
+colcon-uv is released under the [MIT License](LICENSE).
+
+Parts of its design, such as the `[tool.colcon-uv-ros]` configuration with
+`data-files`, follow [colcon-poetry-ros](https://github.com/UrbanMachine/colcon-poetry-ros),
+which is released under the BSD-3-Clause license. Credit goes to its authors.
