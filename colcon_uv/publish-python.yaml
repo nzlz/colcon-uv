@@ -1,0 +1,16 @@
+# Configuration for publish-python (https://github.com/dirk-thomas/publish-python),
+# the tool colcon extensions are released with. It builds the Debian package
+# python3-colcon-uv with stdeb and uploads it to packagecloud, from where it is
+# imported into packages.ros.org.
+#
+# The wheel is not listed here: .github/workflows/publish.yml already uploads
+# it to PyPI on every version tag, and listing it would upload it twice.
+artifacts:
+  - type: stdeb
+    uploads:
+      - type: packagecloud
+        config:
+          repository: dirk-thomas/colcon
+          distributions:
+            - ubuntu:jammy
+            - ubuntu:noble

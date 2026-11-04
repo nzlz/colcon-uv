@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Packaging follows colcon/template-package: metadata and entry points move from `pyproject.toml` (hatchling) to `setup.cfg` (setuptools), and `stdeb.cfg` / `publish-python.yaml` describe the Debian package `python3-colcon-uv` for packages.ros.org. The PyPI wheel has the same files, dependencies and entry points as before.
 - Package metadata now declares the MIT license, matching `LICENSE` (it said BSD-3-Clause). README: license section with an attribution note for colcon-poetry-ros.
 - `colcon list` and `colcon build` no longer copy each package's `data-files` into a `share/` directory under the current directory; package augmentation did that on discovery. The build task still installs them into the install space.
 - When the `uv` executable is not on `PATH`, the build and `colcon uv install` stop with an error that says how to install uv, instead of a `FileNotFoundError` traceback.
