@@ -17,6 +17,30 @@ from colcon_uv.build_type import AMENT_CMAKE, build_type, package_xml_name
 logger = logging.getLogger("colcon.uv.dependencies")
 
 
+UV_INSTALL_URL = "https://docs.astral.sh/uv/getting-started/installation/"
+
+
+def ensure_uv_available() -> str:
+    """Return the path of the ``uv`` executable, or exit with a clear error.
+
+    colcon-uv runs ``uv`` to create each package's venv and install its
+    dependencies. uv is not available from the Ubuntu or ROS apt repositories,
+    so it has to be installed separately; without it the build would otherwise
+    fail with a bare ``FileNotFoundError`` traceback.
+    """
+    uv = shutil.which("uv")
+    if uv is None:
+        logger.error(
+            "colcon-uv needs the 'uv' executable, but it was not found on PATH. "
+            f"Install uv (see {UV_INSTALL_URL}), for example with "
+            "'curl -LsSf https://astral.sh/uv/install.sh | sh' or "
+            "'pipx install uv', and make sure the directory it is installed to "
+            "(usually ~/.local/bin) is on PATH."
+        )
+        sys.exit(1)
+    return uv
+
+
 class NotAUvPackageError(Exception):
     """Raised when a directory is not a UV package."""
 
@@ -236,6 +260,8 @@ def install_dependencies(
     project: UvPackage, install_base: Path, merge_install: bool
 ) -> Path:
     """Install dependencies for a UV package using UV; returns the package's venv."""
+    ensure_uv_available()
+
     # Handle both contexts:
     # 1. Direct install: install_base = /install, need to add package name
     # 2. Build task: install_base = /install/package_name, already included
