@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Packaging follows colcon/template-package: metadata and entry points move from `pyproject.toml` (hatchling) to `setup.cfg` (setuptools), and `stdeb.cfg` / `publish-python.yaml` describe the Debian package `python3-colcon-uv` for packages.ros.org. The PyPI wheel has the same files, dependencies and entry points as before.
 - Package metadata now declares the MIT license, matching `LICENSE` (it said BSD-3-Clause). README: license section with an attribution note for colcon-poetry-ros.
 
 ## 0.5.1
