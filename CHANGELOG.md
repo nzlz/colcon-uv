@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Package metadata now declares the MIT license, matching `LICENSE` (it said BSD-3-Clause). README: license section with an attribution note for colcon-poetry-ros.
+
 ## 0.5.1
 
 - README: no longer marked experimental; acknowledgments section removed. No code changes.
