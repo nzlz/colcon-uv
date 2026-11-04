@@ -7,7 +7,7 @@ name = "colcon-uv"
 dynamic = ["version"]
 description = "A Colcon extension for ROS packages with PyPI dependencies managed by UV (Python, and C++ built by ament_cmake)"
 readme = "README.md"
-license = {text = "BSD-3-Clause"}
+license = {text = "MIT"}
 authors = [
     {name = "Nestor Gonzalez", email = "nestor94gonzalez@gmail.com"}
 ]
@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python",
     "Topic :: Software Development :: Build Tools",
-    "License :: OSI Approved :: BSD License",
+    "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
     "colcon-core~=0.6",
