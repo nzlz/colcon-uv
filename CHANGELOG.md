@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Package metadata now declares the MIT license, matching `LICENSE` (it said BSD-3-Clause). README: license section with an attribution note for colcon-poetry-ros.
+- When the `uv` executable is not on `PATH`, the build and `colcon uv install` stop with an error that says how to install uv, instead of a `FileNotFoundError` traceback.
 
 ## 0.5.1
 

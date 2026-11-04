@@ -437,3 +437,42 @@ name = "test_package"
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestEnsureUvAvailable(unittest.TestCase):
+    """Test the check for the uv executable."""
+
+    def test_returns_path_when_found(self):
+        from colcon_uv.dependencies.install import ensure_uv_available
+
+        with patch("shutil.which", return_value="/usr/local/bin/uv"):
+            self.assertEqual(ensure_uv_available(), "/usr/local/bin/uv")
+
+    def test_exits_with_clear_error_when_missing(self):
+        from colcon_uv.dependencies.install import ensure_uv_available
+
+        with patch("shutil.which", return_value=None):
+            with self.assertLogs("colcon.uv.dependencies", level="ERROR") as logs:
+                with self.assertRaises(SystemExit) as ctx:
+                    ensure_uv_available()
+        self.assertEqual(ctx.exception.code, 1)
+        self.assertIn("'uv' executable", logs.output[0])
+        self.assertIn("docs.astral.sh/uv", logs.output[0])
+
+    @patch("subprocess.run")
+    def test_install_dependencies_stops_before_running_uv(self, mock_run):
+        from colcon_uv.dependencies.install import install_dependencies_from_descriptor
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            desc = PackageDescriptor(temp_path)
+            desc.name = "test_package"
+            (temp_path / "pyproject.toml").write_text(
+                '[tool.colcon-uv-ros]\nname = "test_package"\n'
+            )
+            with patch("shutil.which", return_value=None):
+                with self.assertRaises(SystemExit):
+                    install_dependencies_from_descriptor(
+                        desc, temp_path / "install", False
+                    )
+        mock_run.assert_not_called()
