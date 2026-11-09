@@ -1,5 +1,6 @@
 """Tests for UV package augmentation."""
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -85,8 +86,12 @@ name = "minimal_package"
             self.assertEqual(desc.name, "minimal_package")
 
     def test_augment_uv_package_with_data_files_directory(self):
-        """Test data files handling with directories."""
-        with tempfile.TemporaryDirectory() as temp_dir:
+        """Data files are left to the build task: augmentation writes nothing.
+
+        Package augmentation runs on every ``colcon list`` and ``colcon build``;
+        it used to copy data files into ``./share`` of the working directory.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir, tempfile.TemporaryDirectory() as cwd:
             temp_path = Path(temp_dir)
             pyproject_content = """
 [tool.colcon-uv-ros]
@@ -107,8 +112,14 @@ name = "test_package"
             desc = PackageDescriptor(temp_path)
             desc.type = "uv"
 
-            self.augmentation.augment_package(desc)
+            old_cwd = os.getcwd()
+            os.chdir(cwd)
+            try:
+                self.augmentation.augment_package(desc)
+            finally:
+                os.chdir(old_cwd)
             self.assertEqual(desc.name, "test_package")
+            self.assertEqual(os.listdir(cwd), [])
 
     def test_non_uv_package_ignored(self):
         """Test that non-UV packages are not augmented."""

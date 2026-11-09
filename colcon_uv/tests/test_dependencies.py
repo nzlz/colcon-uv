@@ -435,10 +435,6 @@ name = "test_package"
             self.assertTrue(mock_run.called)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class TestEnsureUvAvailable(unittest.TestCase):
     """Test the check for the uv executable."""
 
@@ -476,3 +472,7 @@ class TestEnsureUvAvailable(unittest.TestCase):
                         desc, temp_path / "install", False
                     )
         mock_run.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

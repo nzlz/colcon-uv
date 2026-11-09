@@ -1,8 +1,6 @@
 """Augment packages that use UV for Python dependency management."""
 
 import logging
-import shutil
-from pathlib import Path
 
 from colcon_core.package_augmentation import PackageAugmentationExtensionPoint
 from colcon_core.package_augmentation.python import create_dependency_descriptor
@@ -18,7 +16,6 @@ class UvPackageAugmentation(PackageAugmentationExtensionPoint):
     _TOOL_SECTION = "tool"
     _COLCON_UV_ROS_SECTION = "colcon-uv-ros"
     _DEPENDENCIES_SECTION = "dependencies"
-    _DATA_FILES_SECTION = "data-files"
     _DEPEND_LIST = "depend"
     _BUILD_DEPEND_LIST = "build_depend"
     _EXEC_DEPEND_LIST = "exec_depend"
@@ -97,26 +94,6 @@ class UvPackageAugmentation(PackageAugmentationExtensionPoint):
                         desc.dependencies[self._PACKAGE_TEST_CATEGORY] = {
                             create_dependency_descriptor(dep) for dep in test_deps
                         }
-
-                    # Handle data files
-                    if self._DATA_FILES_SECTION in uv_config:
-                        data_files = uv_config[self._DATA_FILES_SECTION]
-                        for dest_dir, files in data_files.items():
-                            # Create destination directory if it doesn't exist
-                            dest_path = Path(dest_dir)
-                            dest_path.mkdir(parents=True, exist_ok=True)
-
-                            # Copy each file
-                            for file in files:
-                                src_path = desc.path / file
-                                if src_path.is_file():
-                                    shutil.copy2(src_path, dest_path / src_path.name)
-                                elif src_path.is_dir():
-                                    shutil.copytree(
-                                        src_path,
-                                        dest_path / src_path.name,
-                                        dirs_exist_ok=True,
-                                    )
         except ImportError:
             # If tomli is not available, we'll just use basic metadata
             pass
