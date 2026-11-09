@@ -1,7 +1,7 @@
 # Package metadata and entry points live in setup.cfg, following
 # colcon/template-package, so the Debian package can be built with stdeb.
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel"]
+requires = ["setuptools>=46.4.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.ruff]
