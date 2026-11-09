@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.2
 
 - CI: new workflow `deb.yml` builds `python3-colcon-uv` with stdeb on ROS Humble (Ubuntu 22.04) and Jazzy (Ubuntu 24.04), amd64 and arm64, installs it with apt and builds the example packages with it. It runs on pull requests and version tags and uploads the `.deb` as a workflow artifact; PyPI publishing stays in `publish.yml`.
 - Packaging follows colcon/template-package: metadata and entry points move from `pyproject.toml` (hatchling) to `setup.cfg` (setuptools), and `stdeb.cfg` / `publish-python.yaml` describe the Debian package `python3-colcon-uv` for packages.ros.org. The PyPI wheel has the same files, dependencies and entry points as before.
