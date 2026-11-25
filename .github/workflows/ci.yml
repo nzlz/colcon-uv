@@ -77,6 +77,8 @@ jobs:
 
       - name: Run colcon-uv tests with coverage
         run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends python3-hatchling python3-wheel
           cd /ros2_ws/tools/colcon_uv
           echo "Running colcon-uv unit tests with coverage..."
           coverage run -m pytest tests/ -v
@@ -127,3 +129,19 @@ jobs:
         run: |
           cd /ros2_ws
           /ros2_ws/test_isolation.sh
+
+      - name: Build and run the Python example as a Debian package
+        run: |
+          apt-get install -y --no-install-recommends \
+            python3-bloom python3-all python3-pytest python3-pytest-cov \
+            dh-python debhelper fakeroot binutils patchelf
+          source /opt/ros/${ROS_DISTRO}/setup.bash
+          mkdir -p /tmp/uv-debian-test
+          cp -a tests/examples/uv_ament_python_example /tmp/uv-debian-test/
+          cd /tmp/uv-debian-test/uv_ament_python_example
+          bloom-generate rosdebian --os-name ubuntu --os-version noble --ros-distro jazzy
+          dpkg-buildpackage -us -uc -b
+          cd ..
+          dpkg -i ros-jazzy-uv-ament-python-example_*.deb
+          rm -rf uv_ament_python_example
+          timeout --signal=INT 5 ros2 run uv_ament_python_example ping_node || test "$?" -eq 124

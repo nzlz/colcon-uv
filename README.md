@@ -77,6 +77,30 @@ colcon uv install --base-paths src
 
 **Note**: This step is optional since `colcon build` automatically handles dependency installation. Use this when you want to pre-install dependencies or troubleshoot dependency issues separately from the build process.
 
+## Debian packages
+
+Bundling currently supports `ament_python`; `ament_cmake` is not supported.
+Use `from colcon_uv.setuptools import setup` in `setup.py`. With
+`setuptools.build_meta`, also add `colcon-uv` to `[build-system].requires`.
+Declare ROS/system runtime dependencies in `package.xml` and Python dependencies
+in `pyproject.toml`.
+
+With colcon-uv, uv and build dependencies installed, run in the package directory
+(e.g. [`tests/examples/uv_ament_python_example`](tests/examples/uv_ament_python_example)):
+
+```bash
+bloom-generate rosdebian --os-name ubuntu --os-version noble --ros-distro jazzy
+dpkg-buildpackage -us -uc -b
+```
+
+For the example, install the generated deb with
+`sudo apt install ../ros-jazzy-uv-ament-python-example_*.deb`, then run
+`ros2 run uv_ament_python_example ping_node` in a ROS 2 Jazzy shell.
+
+Build on the target OS/architecture using its system Python. Native wheels need
+`binutils` and `patchelf`. The build may fetch dependencies; bundling does not
+support `uv.lock` or `extra-site-packages`.
+
 ## Configuration
 
 Refer to [colcon_uv/README.md](colcon_uv/README.md#configuration), and to [CHANGELOG.md](CHANGELOG.md) for what changed between versions.
