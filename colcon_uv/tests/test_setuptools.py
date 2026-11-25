@@ -10,10 +10,6 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.skipif(
-    os.environ.get("COLCON_UV_TEST_BUNDLE") != "1",
-    reason="Set COLCON_UV_TEST_BUNDLE=1 to run uv and download build dependencies",
-)
 @pytest.mark.parametrize("backend", ["hatchling.build", "setuptools.build_meta"])
 def test_standard_install_survives_relocation(tmp_path, backend):
     source = tmp_path / "source"
