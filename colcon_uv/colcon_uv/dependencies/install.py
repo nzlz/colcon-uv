@@ -257,10 +257,16 @@ def venv_site_packages(venv_path: Path) -> Optional[Path]:
 
 
 def install_dependencies(
-    project: UvPackage, install_base: Path, merge_install: bool
+    project: UvPackage,
+    install_base: Path,
+    merge_install: bool,
+    *,
+    bundle: bool = False,
+    subprocess_env=None,
 ) -> Path:
     """Install dependencies for a UV package using UV; returns the package's venv."""
     ensure_uv_available()
+    run_options = {"env": subprocess_env} if subprocess_env is not None else {}
 
     # Handle both contexts:
     # 1. Direct install: install_base = /install, need to add package name
@@ -289,7 +295,9 @@ def install_dependencies(
         #   3. sys.executable (the Python running colcon / ROS)
         # Without an explicit version, uv defaults to the highest Python on the
         # system, which can break Boost.Python, ROS system packages, etc.
-        python_version = _resolve_python_version(project)
+        python_version = (
+            "/usr/bin/python3" if bundle else _resolve_python_version(project)
+        )
 
         # A version resolved from .python-version / requires-python may select
         # (or download) an interpreter other than the one running colcon. Since
@@ -309,6 +317,15 @@ def install_dependencies(
                     "uv",
                     "venv",
                     "--system-site-packages",
+                    *(
+                        [
+                            "--relocatable",
+                            "--no-managed-python",
+                            "--no-python-downloads",
+                        ]
+                        if bundle
+                        else []
+                    ),
                     "--python",
                     python_version,
                     str(venv_path),
@@ -316,6 +333,7 @@ def install_dependencies(
                 check=True,
                 capture_output=True,
                 text=True,
+                **run_options,
             )
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to create venv: {e.stderr}")
@@ -383,13 +401,14 @@ def install_dependencies(
                     "--python",
                     str(python_exe),
                     *override_args,
-                    "-e",
+                    *([] if bundle else ["-e"]),
                     install_target,
                 ],
                 check=True,
                 stdout=sys.stdout,
                 stderr=sys.stderr,
                 text=True,
+                **run_options,
             )
         except subprocess.CalledProcessError as e:
             # UV writes its errors to stderr, pass them through to user
@@ -433,6 +452,7 @@ def install_dependencies(
                     stderr=sys.stderr,
                     text=True,
                     cwd=str(project.path),
+                    **run_options,
                 )
             except subprocess.CalledProcessError as e:
                 # UV writes its errors to stderr, pass them through to user
